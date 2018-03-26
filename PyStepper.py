@@ -96,16 +96,16 @@ if __name__ == '__main__':
     # Create an instance of PyStepper for a unipolar motor connected to the
     # pins given in the array. Note that the pin numbers refer to the numers
     # on the 40-pin connector/header, NOT the GPIO numbers
-    stepper = PyStepper(PyStepper.UNIPOLAR, [ 40, 38, 36, 37 ])
+    stepper = PyStepper(PyStepper.BIPOLAR, [ 40, 38, 36, 37 ])
 
     # Test by taking a number of steps
     for i in range(200):
 	# arbitrarily choose to step forward
         stepper.forward()
 
-	# sleep for 2 milliseconds between steps; this determines the speed of
+	# sleep for 10 milliseconds between steps; this determines the speed of
 	# rotation; maximum speed depends on the motor and power supply
-        time.sleep(0.002)
+        time.sleep(0.01)
 
     # Before exiting, clean up, redefining all pins as INPUTS
     Gpio.cleanup()

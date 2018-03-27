@@ -1,0 +1,83 @@
+<!doctype HTML>
+<html>
+    <head>
+        <title>PyStepper Test Server</title>
+        <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/knockout/3.4.2/knockout-min.js'></script>
+        <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>
+        <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js'></script>
+        <script type='text/javascript'>
+            function ViewModel() {
+                var self = this;
+                self.values = ko.observableArray([
+                    { key: 'Status', value: 'connecting' }
+                ]);
+                self.minStep = ko.observable(100);
+                self.targetPos = ko.observable("");
+                self.postMove = function() {
+                    var postData = { target_position: parseInt(self.targetPos()) };
+                    var json = JSON.stringify(postData);
+                    $.post("/api/move", json);
+                }.bind(self);
+                self.moveRelative = function(delta) {
+                    var postData = { target_position: delta, absolute: false };
+                    console.log(postData)
+                    var json = JSON.stringify(postData);
+                    $.post("/api/move", json);
+                }.bind(self);
+                self.increments = ko.pureComputed(function() {
+                    var powers = _.range(4);
+                    return powers.map(x => ({ value: Math.pow(10, x) * self.minStep() }))
+                }, self);
+            }
+            $(document).ready(function() {
+                viewModel = new ViewModel();
+                ko.applyBindings(viewModel);
+                var interval = setInterval(function() {
+                    $.getJSON('/api/status', function(data) {
+                        var newValues = [
+                            { key: 'Status', value: 'connected' },
+                        ];
+                        newValues = newValues.concat(data);
+                        viewModel.values(newValues);
+                    });
+                }, 1000);
+                
+            });
+        </script>
+    </head>
+    <body>
+        <div class="main-content">
+            <table class="status-table">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody data-bind="foreach: values">
+                    <tr>
+                        <td class="status-key" data-bind="text: key"></td>
+                        <td class="status-value" data-bind="text: value"></td>
+                    </tr>
+                </tbody>
+            </table>
+            <form class="cmd-move" data-bind="submit: postMove">
+                Target Position:
+                <input type="number" data-bind='value: targetPos, valueUpdate: "afterkeydown"' />
+                <button type="submit">Move</button>
+            </form>
+            <div class="cmd-relative">
+                Relative moves:
+                <div class="cmd-minstep">
+                    Smallest move: <input type="number" data-bind='value: minStep, valueUpdate: "afterkeydown"' />
+                </div>
+                <div class="cmd-up" data-bind="foreach: increments">
+                    <button data-bind="click: function(data, event) { $root.moveRelative(value) }, text: value"></button>
+                </div>
+                <div class="cmd-down" data-bind="foreach: increments">
+                    <button data-bind="click: function(data, event) { $root.moveRelative(-value) }, text: -value"></button>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

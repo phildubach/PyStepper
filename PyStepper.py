@@ -64,7 +64,7 @@ class PyStepperDaemon(Thread):
                 accel_dist = speed * accel_time / 2
                 if (2 * accel_dist > dist):
                     # cannot accelerate to full speed
-                    accel_dist = dist / 2
+                    accel_dist = (dist + 1) / 2
                     speed = math.sqrt(2 * accel_dist * accel)
                     accel_time = float(speed) / accel
                 # acceleration loop

@@ -12,14 +12,24 @@
                     { key: 'Status', value: 'connecting' }
                 ]);
                 self.minStep = ko.observable(100);
+                self.speed = ko.observable(800);
+                self.customSpeed = ko.observable(false);
                 self.targetPos = ko.observable("");
                 self.postMove = function() {
                     var postData = { target_position: parseInt(self.targetPos()) };
+                    if (self.customSpeed() && (self.speed() > 0)) {
+                        postData.speed = parseInt(self.speed());
+                    }
                     var json = JSON.stringify(postData);
                     $.post("/api/move", json);
                 }.bind(self);
                 self.moveRelative = function(delta) {
                     var postData = { target_position: delta, absolute: false };
+                    if (self.customSpeed() && (self.speed() > 0)) {
+                        postData.speed = parseInt(self.speed());
+                    }
+                    console.log(self.customSpeed());
+                    console.log(self.speed());
                     console.log(postData)
                     var json = JSON.stringify(postData);
                     $.post("/api/move", json);
@@ -66,6 +76,12 @@
                 <input type="number" data-bind='value: targetPos, valueUpdate: "afterkeydown"' />
                 <button type="submit">Move</button>
             </form>
+            <div class="cmd-speed">
+                Use custom speed:
+                <input type="checkbox" data-bind='checked: customSpeed' />
+                Speed:
+                <input type="number" data-bind='value: speed, valueUpdate: "afterkeydown", enable: customSpeed' />
+            </div>
             <div class="cmd-relative">
                 Relative moves:
                 <div class="cmd-minstep">

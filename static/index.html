@@ -8,9 +8,8 @@
         <script type='text/javascript'>
             function ViewModel() {
                 var self = this;
-                self.values = ko.observableArray([
-                    { key: 'Status', value: 'connecting' }
-                ]);
+                self.conn = ko.observable("connecting");
+                self.values = ko.observableArray();
                 self.minStep = ko.observable(100);
                 self.speed = ko.observable(800);
                 self.customSpeed = ko.observable(false);
@@ -43,23 +42,26 @@
                 }, self);
             }
             $(document).ready(function() {
-                viewModel = new ViewModel();
-                ko.applyBindings(viewModel);
-                var interval = setInterval(function() {
+                context = { viewModel: new ViewModel() };
+                ko.applyBindings(context.viewModel);
+                $(document).ajaxError(function() {
+                    clearInterval(context.interval);
+                    context.viewModel.conn("disconnected - please reload");
+                });
+                context.interval = setInterval(function() {
                     $.getJSON('/api/status', function(data) {
-                        var newValues = [
-                            { key: 'Status', value: 'connected' },
-                        ];
-                        newValues = newValues.concat(data);
-                        viewModel.values(newValues);
+                        context.viewModel.conn("connected");
+                        context.viewModel.values(data);
                     });
                 }, 1000);
-                
             });
         </script>
     </head>
     <body>
         <div class="main-content">
+            <div class="conn">
+                <span data-bind="text: conn"></span>
+            </div>
             <table class="status-table">
                 <thead>
                     <tr>

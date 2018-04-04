@@ -96,7 +96,9 @@ class PyStepperDaemon(Thread):
                 logging.exception("Error in PyStepperDaemon")
             # movement completed
             self.speed = 0
-            self.stop = False
+            if self.stop:
+                self.stop = False
+                self.target = self.position
             self.tasks.task_done()
 
     def stop_and_flush(self):

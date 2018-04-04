@@ -22,7 +22,7 @@
 
 import RPi.GPIO as Gpio
 import time, math
-from Queue import Queue
+import Queue
 from threading import Thread
 
 class PyStepperDaemon(Thread):
@@ -33,6 +33,7 @@ class PyStepperDaemon(Thread):
         self.daemon = True
         self.stepper = stepper         # the stepper instance
         self.shutdown = False          # flag to stop execution and exit
+        self.stop = False              # flag to stop current movement
         self.max_speed = max_speed     # maximum speed in steps/s
         self.max_accel = max_accel     # maximum acceleration in steps/s/s
         self.position = position       # current absolute position
@@ -40,7 +41,7 @@ class PyStepperDaemon(Thread):
         self.speed = 0                 # current speed
         self.ulimit = upper_limit      # upper limit (steps from zero)
         self.llimit = lower_limit      # lower limit (steps from zero)
-        self.tasks = Queue()           # movement queue
+        self.tasks = Queue.Queue()     # movement queue
         if self.ulimit != None and self.position > self.ulimit:
             raise RuntimeException("position (%d) > upper limit (%d)" % (self.position, self.ulimit))
         if self.llimit != None and self.position < self.llimit:
@@ -48,7 +49,6 @@ class PyStepperDaemon(Thread):
 
     def run(self):
         """The daemon's main loop; should not be called directly!"""
-        # TODO: fix shutdown while blocked on queue or during movement
         while not self.shutdown:
             (target, speed, accel, absolute) = self.tasks.get()
             start = self.position
@@ -68,7 +68,7 @@ class PyStepperDaemon(Thread):
                     speed = math.sqrt(2 * accel_dist * accel)
                     accel_time = float(speed) / accel
                 # acceleration loop
-                while done < accel_dist:
+                while done < accel_dist and not self.stop:
                     self.speed = speed / accel_dist * (done + 1)
                     incr_time = 1.0 / self.speed
                     self.stepper.step(sign)
@@ -78,13 +78,13 @@ class PyStepperDaemon(Thread):
                 # uniform speed
                 self.speed = speed
                 incr_time = 1.0 / self.speed
-                while done < (dist - accel_dist):
+                while done < (dist - accel_dist) and not self.stop:
                     self.stepper.step(sign)
                     self.position += sign
                     time.sleep(incr_time)
                     done += 1
                 # deceleration loop
-                while done < dist:
+                while done < dist and not self.stop:
                     self.speed = speed / accel_dist * (dist - done)
                     incr_time = 1.0 / self.speed
                     self.stepper.step(sign)
@@ -93,11 +93,25 @@ class PyStepperDaemon(Thread):
                     done += 1
             # movement completed
             self.speed = 0
+            self.stop = False
             self.tasks.task_done()
+
+    def stop_and_flush(self):
+        empty = False
+        while not empty:
+            try:
+                task = self.tasks.get(False)
+                self.tasks.task_done()
+            except Queue.Empty:
+                empty = True
+        self.stop = True
 
     def shutdown(self):
         """Ask the daemon to shut down and wait for it to terminate"""
+        self.stop_and_flush()
         self.shutdown = True
+        # queue dummy movement to wake up daemon
+        self.queue(0, self.max_speed, self.max_accel, absolute=False);
         self.join()
 
     def queue(self, target, speed, accel, absolute=True):
@@ -191,6 +205,10 @@ class PyStepper:
         server = self.get_server()
         server.stop()
         self._server = None
+
+    def stop(self):
+        server = self.get_server();
+        server.stop_and_flush();
 
     def queue(self, target, speed=0, accel=0, absolute=True):
         server = self.get_server()

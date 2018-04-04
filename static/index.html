@@ -15,6 +15,9 @@
                 self.speed = ko.observable(800);
                 self.customSpeed = ko.observable(false);
                 self.targetPos = ko.observable("");
+                self.postStop = function() {
+                    $.post("/api/stop");
+                }.bind(self);
                 self.postMove = function() {
                     var postData = { target_position: parseInt(self.targetPos()) };
                     if (self.customSpeed() && (self.speed() > 0)) {
@@ -93,6 +96,9 @@
                 <div class="cmd-down" data-bind="foreach: increments">
                     <button data-bind="click: function(data, event) { $root.moveRelative(-value) }, text: -value"></button>
                 </div>
+            </div>
+            <div class="cmd-stop">
+                <button data-bind="click: postStop">STOP</button> 
             </div>
         </div>
     </body>

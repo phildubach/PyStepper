@@ -99,7 +99,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         if self.path == '/api/move':
             length = int(self.headers.getheader('Content-Length'))
             json_data = self.rfile.read(length)
-            if True:
+            try:
                 data = json.loads(json_data)
                 # required field
                 target = data['target_position']
@@ -109,10 +109,13 @@ class RequestHandler(BaseHTTPRequestHandler):
                 absolute = data.get('absolute', True)
                 self.get_stepper().queue(target, speed, accel, absolute)
                 self.set_headers(code=204)
-            if False:
+            except:
                 print "Error in post: ", sys.exc_info()[0]
                 self.set_headers(code=400, content_type="text/plain")
                 self.wfile.write("Invalid post data")
+        elif self.path == '/api/stop':
+            self.get_stepper().stop();
+            self.set_headers(code=204);
         else:            
             self.set_headers(404)
         

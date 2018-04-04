@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 import RPi.GPIO as Gpio
-import time, math
+import time, math, logging
 import Queue
 from threading import Thread
 
@@ -50,47 +50,50 @@ class PyStepperDaemon(Thread):
     def run(self):
         """The daemon's main loop; should not be called directly!"""
         while not self.shutdown:
-            (target, speed, accel, absolute) = self.tasks.get()
-            start = self.position
-            if not absolute:
-                target = start + target
-            self.target = target
-            # TODO: handle limits
-            dist = abs(target - start)
-            if not dist == 0:
-                sign = (target - start) / dist
-                done = 0
-                accel_time = float(speed) / accel
-                accel_dist = speed * accel_time / 2
-                if (2 * accel_dist > dist):
-                    # cannot accelerate to full speed
-                    accel_dist = (dist + 1) / 2
-                    speed = math.sqrt(2 * accel_dist * accel)
+            try:
+                (target, speed, accel, absolute) = self.tasks.get()
+                start = self.position
+                if not absolute:
+                    target = start + target
+                self.target = target
+                # TODO: handle limits
+                dist = abs(target - start)
+                if not dist == 0:
+                    sign = (target - start) / dist
+                    done = 0
                     accel_time = float(speed) / accel
-                # acceleration loop
-                while done < accel_dist and not self.stop:
-                    self.speed = speed / accel_dist * (done + 1)
+                    accel_dist = speed * accel_time / 2
+                    if (2 * accel_dist > dist):
+                        # cannot accelerate to full speed
+                        accel_dist = (dist + 1) / 2
+                        speed = math.sqrt(2 * accel_dist * accel)
+                        accel_time = float(speed) / accel
+                    # acceleration loop
+                    while done < accel_dist and not self.stop:
+                        self.speed = speed / accel_dist * (done + 1)
+                        incr_time = 1.0 / self.speed
+                        self.stepper.step(sign)
+                        self.position += sign
+                        time.sleep(incr_time)
+                        done += 1
+                    # uniform speed
+                    self.speed = speed
                     incr_time = 1.0 / self.speed
-                    self.stepper.step(sign)
-                    self.position += sign
-                    time.sleep(incr_time)
-                    done += 1
-                # uniform speed
-                self.speed = speed
-                incr_time = 1.0 / self.speed
-                while done < (dist - accel_dist) and not self.stop:
-                    self.stepper.step(sign)
-                    self.position += sign
-                    time.sleep(incr_time)
-                    done += 1
-                # deceleration loop
-                while done < dist and not self.stop:
-                    self.speed = speed / accel_dist * (dist - done)
-                    incr_time = 1.0 / self.speed
-                    self.stepper.step(sign)
-                    self.position += sign
-                    time.sleep(incr_time)
-                    done += 1
+                    while done < (dist - accel_dist) and not self.stop:
+                        self.stepper.step(sign)
+                        self.position += sign
+                        time.sleep(incr_time)
+                        done += 1
+                    # deceleration loop
+                    while done < dist and not self.stop:
+                        self.speed = speed / accel_dist * (dist - done)
+                        incr_time = 1.0 / self.speed
+                        self.stepper.step(sign)
+                        self.position += sign
+                        time.sleep(incr_time)
+                        done += 1
+            except Exception:
+                logging.exception("Error in PyStepperDaemon")
             # movement completed
             self.speed = 0
             self.stop = False

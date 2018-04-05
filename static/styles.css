@@ -1,5 +1,5 @@
 
-div.cmd-stop, div.cmd-relative, form.cmd-move, div.cmd-speed, table.status-table {
+div.cmd-stop, div.cmd-relative, form.cmd-move, div.cmd-speed, div.cmd-calibrate, table.status-table {
     margin-top: 10px;
 }
 div.cmd-stop button {

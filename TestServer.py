@@ -141,7 +141,7 @@ def get_ip_addr():
     return addr
 
 if __name__ == "__main__":
-    stepper = PyStepper('BIPOLAR', [ 40, 38, 36, 37 ])
+    stepper = PyStepper('BIPOLAR', [ 40, 38, 36, 37 ], [ 22, 11 ])
     stepper.start_daemon()
     try:
         run_server(stepper)

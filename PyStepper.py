@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 import RPi.GPIO as Gpio
-import time, math, logging
+import time, math, logging, sys
 import Queue
 from threading import Thread
 
@@ -55,6 +55,8 @@ class PyStepperDaemon(Thread):
                 start = self.position
                 if mode == 'relative':
                     target = start + target
+                elif mode == 'calibrate':
+                    target = -sys.maxint-1
                 self.target = target
                 # TODO: handle limits
                 dist = abs(target - start)
@@ -72,24 +74,21 @@ class PyStepperDaemon(Thread):
                     while done < accel_dist and not self.stop:
                         self.speed = speed / accel_dist * (done + 1)
                         incr_time = 1.0 / self.speed
-                        self.stepper.step(sign)
-                        self.position += sign
+                        self.step(sign, mode)
                         time.sleep(incr_time)
                         done += 1
                     # uniform speed
                     self.speed = speed
                     incr_time = 1.0 / self.speed
                     while done < (dist - accel_dist) and not self.stop:
-                        self.stepper.step(sign)
-                        self.position += sign
+                        self.step(sign, mode)
                         time.sleep(incr_time)
                         done += 1
                     # deceleration loop
                     while done < dist and not self.stop:
                         self.speed = speed / accel_dist * (dist - done)
                         incr_time = 1.0 / self.speed
-                        self.stepper.step(sign)
-                        self.position += sign
+                        self.step(sign, mode)
                         time.sleep(incr_time)
                         done += 1
             except Exception:
@@ -100,6 +99,24 @@ class PyStepperDaemon(Thread):
                 self.stop = False
                 self.target = self.position
             self.tasks.task_done()
+
+    def step(self, sign, mode):
+        switches = self.stepper.active_switches()
+        if 0 in switches and sign < 0:
+            okay = False
+        elif 1 in switches and sign > 0:
+            okay = False
+        else:
+            okay = True
+
+        if okay:
+            self.stepper.step(sign)
+            self.position += sign
+        else:
+            self.stop = True
+            if sign < 0 and mode == 'calibrate':
+                self.position = 0
+            # TODO: set max for upper switch?
 
     def stop_and_flush(self):
         empty = False
@@ -153,23 +170,28 @@ class PyStepper:
                     [ False, True,  False, True  ] ]
                 }
 
-    def __init__(self, sequence_name, pins):
+    def __init__(self, sequence_name, motor_pins, switch_pins):
         """Create an instance of PyStepper.
 
         Arguments:
         sequence_name -- either 'UNIPOLAR' or 'BIPOLAR'
-        pins          -- an array of 4 pin numbers referring to the pin numbers on
-                         the connector
+        motor_pins    -- an array of 4 pin numbers used for motor control,
+                         referring to the pin numbers on the connector
+        switch_pins   -- an array of 1 or 2 pin numbers used for end switches,
+                         referring to the pin numbers on the connector
         """
         
         self.sequence = PyStepper.sequences[sequence_name]
-        self.pins = pins
+        self.motor_pins = motor_pins
+        self.switch_pins = switch_pins
         Gpio.setmode(Gpio.BOARD)
         self.position = 0;
         self._server = None
-        for pin in self.pins:
+        for pin in self.motor_pins:
             Gpio.setup(pin, Gpio.OUT)
             Gpio.output(pin, Gpio.LOW)
+        for pin in self.switch_pins:
+            Gpio.setup(pin, Gpio.IN, pull_up_down=Gpio.PUD_UP)
 
     def step(self, increment=FORWARD):
         """Perform one step in the given direction
@@ -181,8 +203,8 @@ class PyStepper:
         """
         # TODO: check increment range?
         self.position = (self.position + increment) % len(self.sequence)
-        for idx in range(len(self.pins)):
-            Gpio.output(self.pins[idx], self.sequence[self.position][idx])
+        for idx in range(len(self.motor_pins)):
+            Gpio.output(self.motor_pins[idx], self.sequence[self.position][idx])
 
     def forward(self):
         """Convenience method to take one step forward"""
@@ -191,6 +213,14 @@ class PyStepper:
     def backward(self):
         """Convenience method to take one step backward"""
         self.step(self.BACKWARD)
+
+    def active_switches(self):
+        switches = []
+        for idx in range(len(self.switch_pins)):
+            if Gpio.input(self.switch_pins[idx]) == Gpio.LOW:
+                print "switch %d on" % (idx,)
+                switches.append(idx)
+        return switches
 
     def get_server(self):
         if not self._server:
@@ -231,7 +261,7 @@ if __name__ == '__main__':
     # Create an instance of PyStepper for a unipolar motor connected to the
     # pins given in the array. Note that the pin numbers refer to the numers
     # on the 40-pin connector/header, NOT the GPIO numbers
-    stepper = PyStepper('BIPOLAR', [ 40, 38, 36, 37 ])
+    stepper = PyStepper('BIPOLAR', [ 40, 38, 36, 37 ], [ 22, 11 ])
 
     # deactivated test code
     if False:

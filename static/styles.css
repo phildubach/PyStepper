@@ -18,3 +18,8 @@ div.cmd-stop button:active {
 table.status-table thead {
     background-color: lightgray;
 }
+
+div.main-content {
+    width: 400px;
+    margin: 0 auto;
+}

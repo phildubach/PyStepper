@@ -51,9 +51,9 @@ class PyStepperDaemon(Thread):
         """The daemon's main loop; should not be called directly!"""
         while not self.shutdown:
             try:
-                (target, speed, accel, absolute) = self.tasks.get()
+                (target, speed, accel, mode) = self.tasks.get()
                 start = self.position
-                if not absolute:
+                if mode == 'relative':
                     target = start + target
                 self.target = target
                 # TODO: handle limits
@@ -116,15 +116,15 @@ class PyStepperDaemon(Thread):
         self.stop_and_flush()
         self.shutdown = True
         # queue dummy movement to wake up daemon
-        self.queue(0, self.max_speed, self.max_accel, absolute=False);
+        self.queue(0, self.max_speed, self.max_accel, mode='relative');
         self.join()
 
-    def queue(self, target, speed, accel, absolute=True):
+    def queue(self, target, speed, accel, mode='absolute'):
         if speed == 0:
             speed = self.max_speed
         if accel == 0:
             accel = self.max_accel
-        self.tasks.put((target, speed, accel, absolute))
+        self.tasks.put((target, speed, accel, mode))
 
 class PyStepper:
     """Provides low-level functions for controlling a stepper motor connected to
@@ -215,9 +215,9 @@ class PyStepper:
         server = self.get_server();
         server.stop_and_flush();
 
-    def queue(self, target, speed=0, accel=0, absolute=True):
+    def queue(self, target, speed=0, accel=0, mode='absolute'):
         server = self.get_server()
-        server.queue(target, speed, accel, absolute)
+        server.queue(target, speed, accel, mode)
 
     def sync(self):
         server = self.get_server()

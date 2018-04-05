@@ -111,8 +111,8 @@ class RequestHandler(BaseHTTPRequestHandler):
                 # optional fields
                 speed = data.get('speed', 0)
                 accel = data.get('acceleration', 0)
-                absolute = data.get('absolute', True)
-                self.get_stepper().queue(target, speed, accel, absolute)
+                mode = data.get('mode', 'absolute')
+                self.get_stepper().queue(target, speed, accel, mode)
                 self.set_headers(code=204)
             except:
                 print "Error in post: ", sys.exc_info()[0]

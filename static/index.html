@@ -27,7 +27,7 @@
                     $.post("/api/move", json);
                 }.bind(self);
                 self.moveRelative = function(delta) {
-                    var postData = { target_position: delta, absolute: false };
+                    var postData = { target_position: delta, mode: 'relative' };
                     if (self.customSpeed() && (self.speed() > 0)) {
                         postData.speed = parseInt(self.speed());
                     }

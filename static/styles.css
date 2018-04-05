@@ -23,3 +23,7 @@ div.main-content {
     width: 400px;
     margin: 0 auto;
 }
+
+table.rel-buttons button {
+    width: 100%;
+}

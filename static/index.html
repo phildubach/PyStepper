@@ -92,12 +92,14 @@
                 <div class="cmd-minstep">
                     Smallest move: <input type="number" data-bind='value: minStep, valueUpdate: "afterkeydown"' />
                 </div>
-                <div class="cmd-up" data-bind="foreach: increments">
-                    <button data-bind="click: function(data, event) { $root.moveRelative(value) }, text: value"></button>
-                </div>
-                <div class="cmd-down" data-bind="foreach: increments">
-                    <button data-bind="click: function(data, event) { $root.moveRelative(-value) }, text: -value"></button>
-                </div>
+                <table class="rel-buttons">
+                    <tr data-bind="foreach: increments">
+                        <td><button data-bind="click: function(data, event) { $root.moveRelative(value) }, text: value"></button></td>
+                    </tr>
+                    <tr data-bind="foreach: increments">
+                        <td><button data-bind="click: function(data, event) { $root.moveRelative(-value) }, text: -value"></button></td>
+                    </tr>
+                </table>
             </div>
             <div class="cmd-stop">
                 <button data-bind="click: postStop">STOP</button> 

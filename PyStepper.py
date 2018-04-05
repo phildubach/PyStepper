@@ -143,14 +143,14 @@ class PyStepper:
                     [ False, False, False, True  ],
                     [ True,  False, False, True  ] ],
                   'BIPOLAR': [
-                    [ False, True,  False, True  ],
                     [ False, False, False, True  ],
                     [ True,  False, False, True  ],
                     [ True,  False, False, False ],
                     [ True,  False, True , False ],
                     [ False, False, True , False ],
                     [ False, True , True , False ],
-                    [ False, True , False, False ] ]
+                    [ False, True , False, False ],
+                    [ False, True,  False, True  ] ]
                 }
 
     def __init__(self, sequence_name, pins):

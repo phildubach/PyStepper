@@ -35,8 +35,9 @@ class GetResponse:
         self.flength = 0
         self.code = 404
         if path == '/':
-            path = '/static/index.html'
-        if path.startswith('/static/'):
+            self.code = 301
+            self.redirect_url = 'http://%s/static/index.html' % (self.handler.headers.dict['host'],)
+        elif path.startswith('/static/'):
             self.fname = path[1:]
             if os.path.isfile(self.fname):
                 self.code = 200
@@ -59,12 +60,14 @@ class GetResponse:
                 self.ftype = 'application/json'
 
 class RequestHandler(BaseHTTPRequestHandler):
-    def set_headers(self, code=200, content_type=None, content_length=None):
+    def set_headers(self, code=200, content_type=None, content_length=None, redirect_url=None):
         self.send_response(code)
         if content_type:
             self.send_header('Content-Type', content_type)
         if content_length:
             self.send_header('Content-Length', content_length)
+        if (code/100 == 3) and redirect_url:
+            self.send_header('Location', redirect_url);
         self.end_headers()
 
     def get_stepper(self):
@@ -82,6 +85,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             elif response.json:
                 self.set_headers(response.code, content_type=response.ftype, content_length=len(response.json))
                 self.wfile.write(response.json)
+        elif response.code/100 == 3:
+            self.set_headers(response.code, redirect_url=response.redirect_url)
         else:
             self.send_response(response.code)
 

@@ -61,13 +61,12 @@
     <body>
         <div class="main-content">
             <div class="conn">
-                <span data-bind="text: conn"></span>
+                Status: <span data-bind="text: conn"></span>
             </div>
             <table class="status-table">
                 <thead>
                     <tr>
-                        <th>Status</th>
-                        <th>Value</th>
+                        <td colspan="2">Current values:</td>
                     </tr>
                 </thead>
                 <tbody data-bind="foreach: values">

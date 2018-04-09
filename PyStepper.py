@@ -20,10 +20,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import RPi.GPIO as Gpio
 import time, math, logging, sys
 import Queue
 from threading import Thread
+
+try:
+    import RPi.GPIO as Gpio
+except ImportError:
+    print "Python module RPi.GPIO not found. Using dummy implementation for testing"
+    from . import DummyGpio as Gpio
 
 class PyStepperDaemon(Thread):
     """Provides a server daemon that executes advanced movements"""
@@ -192,8 +197,7 @@ class PyStepper:
         self.position = 0;
         self._server = None
         for pin in self.motor_pins:
-            Gpio.setup(pin, Gpio.OUT)
-            Gpio.output(pin, Gpio.LOW)
+            Gpio.setup(pin, Gpio.OUT, initial=Gpio.LOW)
         self.idle = True
         for pin in self.switch_pins:
             Gpio.setup(pin, Gpio.IN, pull_up_down=Gpio.PUD_UP)

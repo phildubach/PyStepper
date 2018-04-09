@@ -28,7 +28,7 @@ from threading import Thread
 class PyStepperDaemon(Thread):
     """Provides a server daemon that executes advanced movements"""
 
-    def __init__(self, stepper, position=0, max_speed=800, max_accel=1600, upper_limit=None, lower_limit=None):
+    def __init__(self, stepper, position=0, max_speed=800, max_accel=1600, upper_limit=None, lower_limit=None, active_hold=False):
         Thread.__init__(self)
         self.daemon = True
         self.stepper = stepper         # the stepper instance
@@ -41,6 +41,7 @@ class PyStepperDaemon(Thread):
         self.speed = 0                 # current speed
         self.ulimit = upper_limit      # upper limit (steps from zero)
         self.llimit = lower_limit      # lower limit (steps from zero)
+        self.active_hold = active_hold # true if motor should be powered while idle
         self.tasks = Queue.Queue()     # movement queue
         if self.ulimit != None and self.position > self.ulimit:
             raise RuntimeException("position (%d) > upper limit (%d)" % (self.position, self.ulimit))
@@ -95,6 +96,8 @@ class PyStepperDaemon(Thread):
                 logging.exception("Error in PyStepperDaemon")
             # movement completed
             self.speed = 0
+            if not self.active_hold:
+                self.stepper.set_idle(True)
             if self.stop:
                 self.stop = False
                 self.target = self.position
@@ -191,6 +194,7 @@ class PyStepper:
         for pin in self.motor_pins:
             Gpio.setup(pin, Gpio.OUT)
             Gpio.output(pin, Gpio.LOW)
+        self.idle = True
         for pin in self.switch_pins:
             Gpio.setup(pin, Gpio.IN, pull_up_down=Gpio.PUD_UP)
 
@@ -203,6 +207,7 @@ class PyStepper:
         how the motor is wired up. If no direction is given, FORWARD is assumed
         """
         # TODO: check increment range?
+        self.set_idle(False)
         self.position = (self.position + increment) % len(self.sequence)
         for idx in range(len(self.motor_pins)):
             Gpio.output(self.motor_pins[idx], self.sequence[self.position][idx])
@@ -214,6 +219,17 @@ class PyStepper:
     def backward(self):
         """Convenience method to take one step backward"""
         self.step(self.BACKWARD)
+
+    def set_idle(self, idle=True):
+        """Set requested idle state"""
+        if not idle == self.idle:
+            if idle:
+                for pin in self.motor_pins:
+                    Gpio.output(pin, Gpio.LOW)
+            else:
+                for idx in range(len(self.motor_pins)):
+                    Gpio.output(self.motor_pins[idx], self.sequence[self.position][idx])
+            self.idle = idle
 
     def active_switches(self):
         switches = []

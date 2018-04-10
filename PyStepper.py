@@ -28,7 +28,7 @@ try:
     import RPi.GPIO as Gpio
 except ImportError:
     print "Python module RPi.GPIO not found. Using dummy implementation for testing"
-    from . import DummyGpio as Gpio
+    import DummyGpio as Gpio
 
 class PyStepperDaemon(Thread):
     """Provides a server daemon that executes advanced movements"""
@@ -37,7 +37,7 @@ class PyStepperDaemon(Thread):
         Thread.__init__(self)
         self.daemon = True
         self.stepper = stepper         # the stepper instance
-        self.shutdown = False          # flag to stop execution and exit
+        self.shutdownFlag = False      # flag to stop execution and exit
         self.stop = False              # flag to stop current movement
         self.max_speed = max_speed     # maximum speed in steps/s
         self.max_accel = max_accel     # maximum acceleration in steps/s/s
@@ -55,7 +55,7 @@ class PyStepperDaemon(Thread):
 
     def run(self):
         """The daemon's main loop; should not be called directly!"""
-        while not self.shutdown:
+        while not self.shutdownFlag:
             try:
                 (target, speed, accel, mode) = self.tasks.get()
                 start = self.position
@@ -139,7 +139,7 @@ class PyStepperDaemon(Thread):
     def shutdown(self):
         """Ask the daemon to shut down and wait for it to terminate"""
         self.stop_and_flush()
-        self.shutdown = True
+        self.shutdownFlag = True
         # queue dummy movement to wake up daemon
         self.queue(0, self.max_speed, self.max_accel, mode='relative');
         self.join()
@@ -259,7 +259,7 @@ class PyStepper:
     def stop_daemon(self):
         """Stop the previously started daemon thread"""
         server = self.get_server()
-        server.stop()
+        server.shutdown()
         self._server = None
 
     def stop(self):
@@ -277,6 +277,9 @@ class PyStepper:
     def status(self):
         server = self.get_server()
         return dict(position=server.position, target=server.target, speed=server.speed)
+
+    def exit(self):
+        Gpio.cleanup()
 
 if __name__ == '__main__':
     # Create an instance of PyStepper for a unipolar motor connected to the
@@ -302,5 +305,5 @@ if __name__ == '__main__':
     stepper.sync()
 
     # Before exiting, clean up, redefining all pins as INPUTS
-    Gpio.cleanup()
+    stepper.cleanup()
 

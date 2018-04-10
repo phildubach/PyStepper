@@ -54,8 +54,9 @@ def output(channel, value):
     __log("Setting output %d to %s" % (channel, value))
 
 def input(channel):
-    __log("Reading input %d to %s" % (channel, False))
-    return False
+    value = True
+    __log("Reading input %d as %s" % (channel, value))
+    return value
 
 def cleanup():
     __log("Cleanup called")

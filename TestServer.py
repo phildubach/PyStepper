@@ -23,7 +23,6 @@
 from PyStepper import PyStepper
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 import os.path, json, sys, socket
-import RPi.GPIO as Gpio
 
 class GetResponse:
     def __init__(self, handler):
@@ -146,4 +145,5 @@ if __name__ == "__main__":
     try:
         run_server(stepper)
     except KeyboardInterrupt:
-        Gpio.cleanup()
+        stepper.stop_daemon()
+        stepper.exit()

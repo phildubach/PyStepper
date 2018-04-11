@@ -10,7 +10,11 @@
             function ViewModel() {
                 var self = this;
                 self.conn = ko.observable("connecting");
-                self.values = ko.observableArray();
+                self.values = {
+                    position: ko.observable(0),
+                    target: ko.observable(0),
+                    speed: ko.observable(0)
+                };
                 self.minStep = ko.observable(100);
                 self.speed = ko.observable(800);
                 self.customSpeed = ko.observable(false);
@@ -49,7 +53,9 @@
                 context.interval = setInterval(function() {
                     $.getJSON('/api/status', function(data) {
                         context.viewModel.conn("connected");
-                        context.viewModel.values(data);
+                        context.viewModel.values.position(data.position);
+                        context.viewModel.values.target(data.target);
+                        context.viewModel.values.speed(data.speed);
                     });
                 }, 1000);
             });
@@ -66,10 +72,18 @@
                         <td colspan="2">Current values:</td>
                     </tr>
                 </thead>
-                <tbody data-bind="foreach: values">
+                <tbody>
                     <tr>
-                        <td class="status-key" data-bind="text: key"></td>
-                        <td class="status-value" data-bind="text: value"></td>
+                        <td class="status-key">Position:</td>
+                        <td class="status-value" data-bind="text: values.position"></td>
+                    </tr>
+                    <tr>
+                        <td class="status-key">Target:</td>
+                        <td class="status-value" data-bind="text: values.target"></td>
+                    </tr>
+                    <tr>
+                        <td class="status-key">Speed:</td>
+                        <td class="status-value" data-bind="text: values.speed"></td>
                     </tr>
                 </tbody>
             </table>
@@ -102,7 +116,7 @@
                 <button data-bind="click: function(data, event) { $root.moveRelative(0, 'calibrate') }">Calibrate</button>
             </div>
             <div class="cmd-stop">
-                <button data-bind="click: postStop">STOP</button> 
+                <button data-bind="click: postStop">STOP</button>
             </div>
         </div>
     </body>

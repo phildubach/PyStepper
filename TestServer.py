@@ -50,12 +50,7 @@ class GetResponse:
         elif path.startswith('/api/'):
             if path == '/api/status':
                 self.code = 200
-                status = self.handler.get_stepper().status()
-                self.json = json.dumps([
-                    { 'key': 'Current position', 'value': status['position'] },
-                    { 'key': 'Target position', 'value': status['target'] },
-                    { 'key': 'Current speed', 'value': status['speed'] }
-                ])
+                self.json = json.dumps(self.handler.get_stepper().status())
                 self.ftype = 'application/json'
 
 class RequestHandler(BaseHTTPRequestHandler):

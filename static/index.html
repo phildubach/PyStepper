@@ -27,16 +27,14 @@
                     if (self.customSpeed() && (self.speed() > 0)) {
                         postData.speed = parseInt(self.speed());
                     }
-                    var json = JSON.stringify(postData);
-                    $.post("/api/move", json);
+                    $.post("/api/move", postData);
                 }.bind(self);
                 self.moveRelative = function(delta, mode='relative') {
                     var postData = { target_position: delta, mode: mode };
                     if (self.customSpeed() && (self.speed() > 0)) {
                         postData.speed = parseInt(self.speed());
                     }
-                    var json = JSON.stringify(postData);
-                    $.post("/api/move", json);
+                    $.post("/api/move", postData);
                 }.bind(self);
                 self.increments = ko.pureComputed(function() {
                     var powers = _.range(4);

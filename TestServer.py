@@ -22,7 +22,7 @@
 
 from PyStepper import PyStepper
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-import os.path, json, sys, socket
+import os.path, json, sys, socket, urlparse
 
 class GetResponse:
     def __init__(self, handler):
@@ -97,15 +97,16 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == '/api/move':
             length = int(self.headers.getheader('Content-Length'))
-            json_data = self.rfile.read(length)
+            form_data = self.rfile.read(length)
             try:
-                data = json.loads(json_data)
+                data = urlparse.parse_qs(form_data)
+                arr_zero = ['0']
                 # required field
-                target = data['target_position']
+                target = int(data['target_position'][0])
                 # optional fields
-                speed = data.get('speed', 0)
-                accel = data.get('acceleration', 0)
-                mode = data.get('mode', 'absolute')
+                speed = int(data.get('speed', arr_zero)[0])
+                accel = int(data.get('acceleration', arr_zero)[0])
+                mode = data.get('mode', ['absolute'])[0]
                 self.get_stepper().queue(target, speed, accel, mode)
                 self.set_headers(code=204)
             except:

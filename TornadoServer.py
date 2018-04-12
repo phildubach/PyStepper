@@ -23,6 +23,7 @@
 from PyStepper import PyStepper
 import tornado.ioloop
 import tornado.web
+import sockjs.tornado
 
 class StatusHandler(tornado.web.RequestHandler):
     def get(self):
@@ -43,15 +44,36 @@ class StopHandler(tornado.web.RequestHandler):
         stepper = self.settings['stepper']
         stepper.stop()
 
+class StatusConnection(sockjs.tornado.SockJSConnection):
+    def on_open(self, info):
+        self.loop = tornado.ioloop.PeriodicCallback(self.send_status, 1000)
+        self.loop.start()
+
+    def on_close(self):
+        self.loop.stop()
+
+    def on_message(self, msg):
+        pass
+
+    def send_status(self):
+        stepper = self.session.server.stepper
+        self.session.send_message(stepper.status())
+
+class StatusRouter(sockjs.tornado.SockJSRouter):
+    def __init__(self, path, stepper):
+        sockjs.tornado.SockJSRouter.__init__(self, StatusConnection, path)
+        self.stepper = stepper
+
 if __name__ == '__main__':
     stepper = PyStepper('BIPOLAR', [ 40, 38, 36, 37 ], [ 22, 11 ])
     stepper.start_daemon()
+    statusRouter = StatusRouter('/statusconn', stepper)
     app = tornado.web.Application([
         ( r"/", tornado.web.RedirectHandler, { "url": "/static/index.html" }),
         ( r"/api/status", StatusHandler ),
         ( r"/api/move", MoveHandler ),
         ( r"/api/stop", StopHandler ),
-    ], static_path="./static")
+    ] + statusRouter.urls, static_path="./static")
     app.settings['stepper'] = stepper
     app.listen(8080)
     try:

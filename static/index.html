@@ -6,6 +6,7 @@
         <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/knockout/3.4.2/knockout-min.js'></script>
         <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js'></script>
         <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js'></script>
+        <script type='text/javascript' src='http://cdn.jsdelivr.net/sockjs/0.3/sockjs.min.js'></script>
         <script type='text/javascript'>
             function ViewModel() {
                 var self = this;
@@ -40,22 +41,40 @@
                     var powers = _.range(4);
                     return powers.map(x => ({ value: Math.pow(10, x) * self.minStep() }))
                 }, self);
+                self.update = function(data) {
+                    this.conn("connected");
+                    this.values.position(data.position);
+                    this.values.target(data.target);
+                    this.values.speed(data.speed);
+                }
             }
             $(document).ready(function() {
                 context = { viewModel: new ViewModel() };
                 ko.applyBindings(context.viewModel);
-                $(document).ajaxError(function() {
-                    clearInterval(context.interval);
-                    context.viewModel.conn("disconnected - please reload");
+                $.getJSON('/api/status', function(data, status, xhr) {
+                    context.viewModel.update(data);
+                    if (xhr.getResponseHeader("Server").startsWith("Tornado")) {
+                        var conn = new SockJS('/statusconn');
+                        conn.onopen = function() {
+                            console.log("opened sockJS connection");
+                        };
+                        conn.onmessage = function(msg) {
+                            data = msg.data;
+                            context.viewModel.update(data);
+                        };
+                    } else {
+                        // fall back on AJAX polling
+                        $(document).ajaxError(function() {
+                            clearInterval(context.interval);
+                            context.viewModel.conn("disconnected - please reload");
+                        });
+                        context.interval = setInterval(function() {
+                            $.getJSON('/api/status', function(data) {
+                                context.viewModel.update(data);
+                            });
+                        }, 1000);
+                    }
                 });
-                context.interval = setInterval(function() {
-                    $.getJSON('/api/status', function(data) {
-                        context.viewModel.conn("connected");
-                        context.viewModel.values.position(data.position);
-                        context.viewModel.values.target(data.target);
-                        context.viewModel.values.speed(data.speed);
-                    });
-                }, 1000);
             });
         </script>
     </head>

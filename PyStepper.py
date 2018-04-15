@@ -47,6 +47,7 @@ class PyStepperDaemon(Thread):
         self.speed = 0                 # current speed
         self.ulimit = upper_limit      # upper limit (steps from zero)
         self.llimit = lower_limit      # lower limit (steps from zero)
+        self.callback = None           # callback function for status updates
         self.active_hold = active_hold # true if motor should be powered while idle
         self.tasks = Queue.Queue()     # movement queue
         if self.ulimit != None and self.position > self.ulimit:
@@ -72,6 +73,8 @@ class PyStepperDaemon(Thread):
                 # TODO: handle limits
                 dist = abs(target - start)
                 if not dist == 0:
+                    if self.callback:
+                        self.callback.callback()
                     sign = (target - start) / dist
                     done = 0
                     accel_time = float(speed) / accel
@@ -114,6 +117,8 @@ class PyStepperDaemon(Thread):
                     self.calibrated = True
                 self.target = self.position
             self.tasks.task_done()
+            if self.callback:
+                self.callback.callback()
 
     def step(self, sign, mode):
         switches = self.stepper.active_switches()
@@ -132,6 +137,8 @@ class PyStepperDaemon(Thread):
             if sign < 0 and mode == 'calibrate':
                 self.position = 0
             # TODO: set max for upper switch?
+        if self.callback and self.position % 100 == 0:
+            self.callback.callback()
 
     def stop_and_flush(self):
         empty = False
@@ -150,6 +157,11 @@ class PyStepperDaemon(Thread):
         # queue dummy movement to wake up daemon
         self.queue(0, self.max_speed, self.max_accel, mode='relative');
         self.join()
+
+    def set_callback(self, callback):
+        self.callback = callback
+        if self.callback:
+            self.callback.callback()
 
     def queue(self, target, speed, accel, mode='absolute'):
         if speed == 0:
@@ -284,6 +296,10 @@ class PyStepper:
     def status(self):
         server = self.get_server()
         return dict(position=server.position, target=server.target, speed=server.speed, calibrated=server.calibrated)
+
+    def set_callback(self, callback=None):
+        server = self.get_server()
+        server.set_callback(callback)
 
     def exit(self):
         Gpio.cleanup()

@@ -46,18 +46,23 @@ class StopHandler(tornado.web.RequestHandler):
 
 class StatusConnection(sockjs.tornado.SockJSConnection):
     def on_open(self, info):
-        self.loop = tornado.ioloop.PeriodicCallback(self.send_status, 1000)
-        self.loop.start()
+        self.stepper = self.session.server.stepper
+        self.stepper.set_callback(self)
+        # self.loop = tornado.ioloop.PeriodicCallback(self.send_status, 1000)
+        #self.loop.start()
 
     def on_close(self):
-        self.loop.stop()
+        self.stepper.set_callback(None)
+        # self.loop.stop()
 
     def on_message(self, msg):
         pass
 
     def send_status(self):
-        stepper = self.session.server.stepper
-        self.session.send_message(stepper.status())
+        self.session.send_message(self.stepper.status())
+
+    def callback(self):
+        self.send_status()
 
 class StatusRouter(sockjs.tornado.SockJSRouter):
     def __init__(self, path, stepper):

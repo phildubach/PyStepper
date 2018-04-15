@@ -36,6 +36,7 @@ class PyStepperDaemon(Thread):
     def __init__(self, stepper, position=0, max_speed=800, max_accel=1600, upper_limit=None, lower_limit=None, active_hold=False):
         Thread.__init__(self)
         self.daemon = True
+        self.calibrated = False        # determines if absolute positioning is available
         self.stepper = stepper         # the stepper instance
         self.shutdownFlag = False      # flag to stop execution and exit
         self.stop = False              # flag to stop current movement
@@ -63,6 +64,10 @@ class PyStepperDaemon(Thread):
                     target = start + target
                 elif mode == 'calibrate':
                     target = -sys.maxint-1
+                else: # mode == 'absolute'
+                    if not self.calibrated:
+                        logging.error("cannot do absolute move; not calibrated")
+                        target = start # make it a dummy move
                 self.target = target
                 # TODO: handle limits
                 dist = abs(target - start)
@@ -105,6 +110,8 @@ class PyStepperDaemon(Thread):
                 self.stepper.set_idle(True)
             if self.stop:
                 self.stop = False
+                if mode == 'calibrate' and self.position == 0:
+                    self.calibrated = True
                 self.target = self.position
             self.tasks.task_done()
 
@@ -276,7 +283,7 @@ class PyStepper:
 
     def status(self):
         server = self.get_server()
-        return dict(position=server.position, target=server.target, speed=server.speed)
+        return dict(position=server.position, target=server.target, speed=server.speed, calibrated=server.calibrated)
 
     def exit(self):
         Gpio.cleanup()

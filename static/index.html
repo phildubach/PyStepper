@@ -12,6 +12,7 @@
                 var self = this;
                 self.conn = ko.observable("connecting");
                 self.values = {
+                    calibrated: ko.observable(false),
                     position: ko.observable(0),
                     target: ko.observable(0),
                     speed: ko.observable(0)
@@ -43,6 +44,7 @@
                 }, self);
                 self.update = function(data) {
                     this.conn("connected");
+                    this.values.calibrated(data.calibrated);
                     this.values.position(data.position);
                     this.values.target(data.target);
                     this.values.speed(data.speed);
@@ -91,6 +93,10 @@
                 </thead>
                 <tbody>
                     <tr>
+                        <td class="status-key">Calibrated:</td>
+                        <td class="status-value" data-bind="text: values.calibrated"></td>
+                    </tr>
+                    <tr>
                         <td class="status-key">Position:</td>
                         <td class="status-value" data-bind="text: values.position"></td>
                     </tr>
@@ -106,8 +112,8 @@
             </table>
             <form class="cmd-move" data-bind="submit: postMove">
                 Target Position:
-                <input type="number" data-bind='value: targetPos, valueUpdate: "afterkeydown"' />
-                <button type="submit">Move</button>
+                <input type="number" data-bind='value: targetPos, valueUpdate: "afterkeydown", enable: values.calibrated' />
+                <button type="submit" data-bind="enable: values.calibrated">Move</button>
             </form>
             <div class="cmd-speed">
                 Use custom speed:

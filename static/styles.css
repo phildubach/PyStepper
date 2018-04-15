@@ -27,3 +27,7 @@ div.main-content {
 table.rel-buttons button {
     width: 100%;
 }
+
+input:disabled {
+    background: #cccccc;
+}
